@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Days\AocDay;
@@ -20,7 +22,7 @@ class Aoc extends Command
 
     public function __invoke(): void
     {
-        $input = $this->getInput();
+        $input = $this->getProgramInput();
 
         $this->registerDays()
             ->when(
@@ -50,12 +52,11 @@ class Aoc extends Command
                 );
                 $this->components->twoColumnDetail('Part one', $result[0]);
                 $this->components->twoColumnDetail('Part two', $result[1]);
-
                 $this->newLine();
             });
     }
 
-    private function getInput(): ?string
+    private function getProgramInput(): ?string
     {
         if (! posix_isatty(STDIN)) {
             return file_get_contents('php://stdin');
