@@ -22,6 +22,12 @@ class Aoc extends Command
 
     public function __invoke(): void
     {
+        $year = Str::afterLast(dirname(__DIR__, 4), DIRECTORY_SEPARATOR);
+
+        $this->newLine();
+
+        $this->components->info("Advent of Code {$year}");
+
         $input = $this->getProgramInput();
 
         $this->registerDays()
@@ -86,7 +92,7 @@ class Aoc extends Command
             ->map(fn ($file) => str_replace(
                 search: ['app/', '/', '.php'],
                 replace: ['App\\', '\\', ''],
-                subject: Str::after($file->getRealPath(), base_path()),
+                subject: Str::after($file->getRealPath(), base_path() . DIRECTORY_SEPARATOR),
             ))
             ->sort()
             ->filter(fn ($class) => is_subclass_of($class, AocDay::class))
