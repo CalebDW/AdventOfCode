@@ -13,7 +13,7 @@ class Day01 extends AocDay
     {
         return $this->concatAndSum(
             $this->lines
-                ->map(fn ($l) => str_split(preg_replace('/\D/', '', $l)))
+                ->map(fn ($line) => str_split(preg_replace('/\D/', '', $line)))
         );
     }
 
@@ -37,14 +37,14 @@ class Day01 extends AocDay
 
         return $this->concatAndSum(
             $this->lines
-                ->map(function ($l) use ($pattern) {
-                    preg_match_all($pattern, $l, $matches);
+                ->map(function ($line) use ($pattern) {
+                    preg_match_all($pattern, $line, $matches);
                     return $matches[1];
                 })
-                ->map(fn ($l) => str_replace(
+                ->map(fn ($numbers) => str_replace(
                     search: array_values($digits),
                     replace: array_keys($digits),
-                    subject: $l,
+                    subject: $numbers,
                 )),
         );
     }
@@ -53,8 +53,8 @@ class Day01 extends AocDay
     public function concatAndSum(Collection $lines): int
     {
         return $lines
-            ->filter(fn ($m) => ! empty($m))
-            ->map(fn ($l) => $l[0] . end($l))
+            ->filter(fn ($numbers) => ! empty($numbers))
+            ->map(fn ($numbers) => $numbers[0] . end($numbers))
             ->sum();
     }
 }
