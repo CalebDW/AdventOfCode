@@ -56,10 +56,19 @@ class Aoc extends Command
                     "<fg=green;options=bold>{$day->label()}</>",
                     "<fg=gray>$runTime ms</>",
                 );
-                $this->components->twoColumnDetail('Part one', $result[0]);
-                $this->components->twoColumnDetail('Part two', $result[1]);
+                $this->components->twoColumnDetail('Part one', $this->formatResult($result[0]));
+                $this->components->twoColumnDetail('Part two', $this->formatResult($result[1]));
                 $this->newLine();
             });
+    }
+
+    private function formatResult(mixed $value): string
+    {
+        if ($value !== null) {
+            return (string) $value;
+        }
+
+        return "<fg=yellow;options=bold>INCOMPLETE</>";
     }
 
     private function getProgramInput(): ?string
