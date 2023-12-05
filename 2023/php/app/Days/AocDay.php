@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Days;
 
 use Illuminate\Support\Collection;
@@ -13,7 +15,7 @@ abstract class AocDay
     /** @return array{mixed, mixed} */
     public function __invoke(string $input, ?int $part = null): array
     {
-        $this->lines = collect($this->parseInput($input));
+        $this->parseInput($input);
 
         $parts = [null, null];
 
@@ -25,24 +27,19 @@ abstract class AocDay
             $parts[1] = $this->partTwo();
         }
 
-
         return $parts;
     }
 
     public function label(): string
     {
-        $day = (int) Str::afterLast(
-            Str::headline(class_basename($this)),
-            'Day',
-        );
-
-        return "Day {$day}";
+        return Str::of(class_basename($this))
+            ->replace('Day', 'Day ')
+            ->toString();
     }
 
-    /** @return array<int, string> */
-    protected function parseInput(string $input): array
+    protected function parseInput(string $input): void
     {
-        return explode("\n", $input);
+        $this->lines = collect(explode("\n", $input));
     }
 
     abstract public function partOne(): mixed;
