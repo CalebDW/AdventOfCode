@@ -13,10 +13,7 @@ class Day04 extends AocDay
     protected Collection $cards;
 
     /** @var array<int, int> */
-    protected array $cardStack;
-
-    /** @var array<int, int> */
-    protected array $processedCardIds = [];
+    protected array $totalCounts = [];
 
     public function partOne(): mixed
     {
@@ -30,25 +27,9 @@ class Day04 extends AocDay
 
     public function partTwo(): mixed
     {
-        $this->cardStack = $this->cards->pluck('id')
-            ->reverse()
-            ->all();
+        $this->cards->reverse()->each(fn ($card) => $this->addCount($card->id));
 
-        while (! empty($this->cardStack)) {
-            $card = $this->cards[array_pop($this->cardStack)];
-
-            $this->processedCardIds[] = $card->id;
-
-            if (! $numberOfMatches = $card->numberOfMatches()) {
-                continue;
-            }
-
-            for ($i = $numberOfMatches; $i > 0; $i--) {
-                $this->cardStack[] = $this->cards[$card->id + $i]->id;
-            }
-        }
-
-        return count($this->processedCardIds);
+        return array_sum($this->totalCounts);
     }
 
     public function parseCard(string $line): Card
@@ -65,6 +46,25 @@ class Day04 extends AocDay
             winningNumbers: array_map('intval', explode(' ', $numbers[0])),
             numbers: array_map('intval', explode(' ', $numbers[1])),
         );
+    }
+
+    public function addCount(int $cardId): int
+    {
+        if (isset($this->totalCounts[$cardId])) {
+            return $this->totalCounts[$cardId];
+        }
+
+        $this->totalCounts[$cardId] = 1;
+
+        $copies = ($numberOfMatches = $this->cards[$cardId]->numberOfMatches())
+            ? range($numberOfMatches + $cardId, $cardId + 1)
+            : [];
+
+        foreach ($copies as $newCardId) {
+            $this->totalCounts[$cardId] += $this->addCount($newCardId);
+        }
+
+        return $this->totalCounts[$cardId];
     }
 }
 
