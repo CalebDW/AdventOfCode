@@ -32,7 +32,7 @@ class Day04 extends AocDay
         return array_sum($this->totalCounts);
     }
 
-    public function parseCard(string $line): Card
+    public function parseCard(string $line): CardDay04
     {
         preg_match('/Card\s+(\d+):/', $line, $match);
 
@@ -41,7 +41,7 @@ class Day04 extends AocDay
             ->squish()
             ->explode(' | ');
 
-        return new Card(
+        return new CardDay04(
             id: (int) $match[1],
             winningNumbers: array_map('intval', explode(' ', $numbers[0])),
             numbers: array_map('intval', explode(' ', $numbers[1])),
@@ -68,7 +68,7 @@ class Day04 extends AocDay
     }
 }
 
-final readonly class Card
+final readonly class CardDay04
 {
     private int $numberOfMatches;
 
