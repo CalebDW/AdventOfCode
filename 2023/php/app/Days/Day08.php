@@ -23,29 +23,35 @@ class Day08 extends AocDay
         $this->instructions = $instructions;
         $this->instructionsLength = strlen($instructions);
 
-        $this->nodes = collect(explode("\n", $nodes))
-            ->filter()
-            ->map(fn ($line) => $this->parseNode($line))
-            ->keyBy('value');
+        $this->nodes = $this->parseNodes($nodes);
     }
 
     public function partOne(): mixed
     {
-        return $this->walk(from: 'AAA', to: 'ZZZ');
+        return $this->walk(
+            from: $this->nodes['AAA'],
+            to: $this->nodes['ZZZ'],
+        );
     }
 
     public function partTwo(): mixed
     {
-        // $prod = $this->nodes
-        //     ->filter(fn ($node) => $node->value[2] === 'A')
-        //     ->values()
-        //     ->map(fn ($node) => $this->walk($node->value, fn ($value) => $value[2] === 'Z'))
-        // ->dd()
-        //     ->reduce(fn ($carry, $count) => $carry * $count, 1);
+        return $this->nodes
+            ->filter(fn ($node) => $node->value[2] === 'A')
+            ->values()
+            ->map(fn ($node) => $this->walk($node, fn ($node) => $node->value[2] === 'Z'))
+            ->reduce(fn ($carry, $count) => ($carry * $count) / gmp_gcd($carry, $count), 1);
+    }
 
-        // return (string) $prod;
+    /** @return Collection<int, Node> */
+    protected function parseNodes(string $nodes): Collection
+    {
+        $nodes = collect(explode("\n", $nodes))
+            ->filter()
+            ->map(fn ($line) => $this->parseNode($line))
+            ->keyBy('value');
 
-        return $this->walkParallel();
+        return $this->attachNodes($nodes);
     }
 
     protected function parseNode(string $line): Node
@@ -54,52 +60,35 @@ class Day08 extends AocDay
 
         return new Node(
             value: $value,
-            left: Str::of($elements)->after('(')->before(',')->toString(),
-            right: Str::of($elements)->after(', ')->before(')')->toString(),
+            children: Str::of($elements)->remove(['(', ')'])->explode(', ')->all(),
         );
     }
 
-    protected function walk(string $from, string|Closure $to): int
+    /**
+     * @param Collection<int, Node> $nodes
+     * @return Collection<int, Node>
+     */
+    protected function attachNodes(Collection $nodes): Collection
     {
-        if (is_string($to)) {
-            $to = fn ($value) => $value === $to;
-        }
-
-        $current = $this->nodes[$from];
-        $steps = 0;
-
-        while (! $to($current->value)) {
-            $node = match($this->instructions[$steps % $this->instructionsLength]) {
-                'L' => $current->left,
-                'R' => $current->right,
-            };
-
-            $current = $this->nodes[$node];
-
-            $steps++;
-        }
-
-        return $steps;
+        return $nodes->each(function ($node) use ($nodes) {
+            $node->left = $nodes[$node->children[0]];
+            $node->right = $nodes[$node->children[1]];
+        });
     }
 
-    protected function walkParallel(): int
+    protected function walk(Node $from, Node|Closure $to): int
     {
-        $nodes = $this->nodes
-            ->filter(fn ($n) => $n->value[2] === 'A')
-            ->values();
+        if ($to instanceof Node) {
+            $to = fn ($node) => $node === $to;
+        }
+
         $steps = 0;
 
-        while ($nodes->filter(fn ($n) => $n->value[2] !== 'Z')->count()) {
-            $instruction = $this->instructions[$steps % $this->instructionsLength];
-
-            foreach ($nodes as $i => $current) {
-                $nodeValue = match($instruction) {
-                    'L' => $current->left,
-                    'R' => $current->right,
-                };
-
-                $nodes[$i] = $this->nodes[$nodeValue];
-            }
+        while (! $to($from)) {
+            $from = match($this->instructions[$steps % $this->instructionsLength]) {
+                'L' => $from->left,
+                'R' => $from->right,
+            };
 
             $steps++;
         }
@@ -108,12 +97,15 @@ class Day08 extends AocDay
     }
 }
 
-final readonly class Node
+final class Node
 {
+    public Node $left;
+    public Node $right;
+
     public function __construct(
         public string $value,
-        public string $left,
-        public string $right,
+        /** @var array{string, string} */
+        public array $children,
     ) {
     }
 }
