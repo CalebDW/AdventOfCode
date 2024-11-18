@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Days\AocDay;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
 
@@ -25,7 +26,6 @@ class Aoc extends Command
         $year = Str::afterLast(dirname(__DIR__, 4), DIRECTORY_SEPARATOR);
 
         $this->newLine();
-
         $this->components->info("Advent of Code {$year}");
 
         $input = $this->getProgramInput();
@@ -33,23 +33,16 @@ class Aoc extends Command
         $this->registerDays()
             ->when(
                 $this->option('day'),
-                fn ($days, $day) => $days->filter(
-                    fn ($_, $class) => str_contains(
-                        $class,
-                        str_pad($day, 2, '0', STR_PAD_LEFT),
-                    ),
-                ),
+                fn ($days, $day) => $days->filter(fn ($_, $class) => str_contains(
+                    $class,
+                    str_pad($day, 2, '0', STR_PAD_LEFT),
+                )),
             )
             ->whenEmpty(fn () => $this->components->warn('No days found.'))
-            ->each(function ($day) use ($input) {
+            ->each(function ($day) use ($input, $year) {
                 $startTime = microtime(true);
-
-                if ($input === null) {
-                    $input = $this->getDayInput($day);
-                }
-
+                $input ??= $this->getDayInput($day, $year);
                 $result = $day($input, (int) $this->option('part'));
-
                 $runTime = number_format((microtime(true) - $startTime) * 1000);
 
                 $this->components->twoColumnDetail(
@@ -80,13 +73,30 @@ class Aoc extends Command
         return $this->argument('input');
     }
 
-    private function getDayInput(AocDay $day): string
+    private function getDayInput(AocDay $day, string $year): string
     {
         $file = Str::camel(class_basename($day)) . '.txt';
+        $path = dirname(__DIR__, levels: 4) . "/inputs/{$file}";
 
-        return file_get_contents(
-            dirname(__DIR__, levels: 4) . "/inputs/{$file}",
-        );
+        if (file_exists($path)) {
+            return file_get_contents($path);
+        }
+
+        $day = (int) Str::of($file)->match('/\d+/')->value();
+        $session = env('AOC_SESSION');
+        throw_unless($session, 'No session cookie found. Please set the AOC_SESSION environment variable.');
+
+        $response = Http::withHeaders(['Cookie' => "session={$session}"])
+            ->get("https://adventofcode.com/{$year}/day/{$day}/input")
+            ->throw();
+
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0775, recursive: true);
+        }
+
+        file_put_contents($path, $response->body());
+
+        return $response->body();
     }
 
     /** @return Collection<int, AocDay> */
@@ -94,7 +104,7 @@ class Aoc extends Command
     {
         return collect()
             ->wrap(iterator_to_array(
-                resolve(Finder::class)->files()
+                Finder::create()->files()
                     ->in([app_path()])
                     ->path('Days'),
             ))
@@ -105,7 +115,6 @@ class Aoc extends Command
             ))
             ->sort()
             ->filter(fn ($class) => is_subclass_of($class, AocDay::class))
-            ->mapWithKeys(fn ($c) => [$c => $c])
-            ->map(fn ($class) => resolve($class));
+            ->mapWithKeys(fn ($c) => [$c => resolve($c)]);
     }
 }
