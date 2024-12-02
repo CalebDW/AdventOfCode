@@ -8,7 +8,6 @@ use App\Days\AocDay;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-
 class Day02 extends AocDay
 {
     protected Bag $bag;
