@@ -15,6 +15,7 @@ class Aoc extends Command
 {
     protected $signature = 'aoc
         {input? : The challenge input}
+        {--y|year= : The year to execute, if null then executes current year}
         {--d|day= : The day to execute, if null then executes all days}
         {--p|part= : The part to execute, if null then executes all parts}
     ';
@@ -23,14 +24,14 @@ class Aoc extends Command
 
     public function __invoke(): void
     {
-        $year = Str::afterLast(dirname(__DIR__, 4), DIRECTORY_SEPARATOR);
+        $year = $this->option('year') ?? date('Y');
 
         $this->newLine();
         $this->components->info("Advent of Code {$year}");
 
         $input = $this->getProgramInput();
 
-        $this->registerDays()
+        $this->registerDays($year)
             ->when(
                 $this->option('day'),
                 fn ($days, $day) => $days->filter(fn ($_, $class) => str_contains(
@@ -76,7 +77,7 @@ class Aoc extends Command
     private function getDayInput(AocDay $day, string $year): string
     {
         $file = Str::camel(class_basename($day)) . '.txt';
-        $path = dirname(__DIR__, levels: 4) . "/inputs/{$file}";
+        $path = dirname(__DIR__, levels: 4) . "/inputs/{$year}/{$file}";
 
         if (file_exists($path)) {
             return file_get_contents($path);
@@ -100,13 +101,13 @@ class Aoc extends Command
     }
 
     /** @return Collection<int, AocDay> */
-    private function registerDays(): Collection
+    private function registerDays(string $year): Collection
     {
         return collect()
             ->wrap(iterator_to_array(
                 Finder::create()->files()
                     ->in([app_path()])
-                    ->path('Days'),
+                    ->path("Days/Year{$year}"),
             ))
             ->map(fn ($file) => str_replace(
                 search: ['app/', '/', '.php'],

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Days;
+namespace App\Days\Year2023;
+
+use App\Days\AocDay;
 
 class Day09 extends AocDay
 {

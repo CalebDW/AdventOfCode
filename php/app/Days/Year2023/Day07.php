@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Days;
+namespace App\Days\Year2023;
 
+use App\Days\AocDay;
 use Illuminate\Support\Collection;
 
 class Day07 extends AocDay
