@@ -31,14 +31,7 @@ class Aoc extends Command
 
         $input = $this->getProgramInput();
 
-        $this->registerDays($year)
-            ->when(
-                $this->option('day'),
-                fn ($days, $day) => $days->filter(fn ($_, $class) => str_contains(
-                    $class,
-                    str_pad($day, 2, '0', STR_PAD_LEFT),
-                )),
-            )
+        $this->registerDays($year, $this->option('day'))
             ->whenEmpty(fn () => $this->components->warn('No days found.'))
             ->each(function ($day) use ($input, $year) {
                 $startTime = microtime(true);
@@ -101,13 +94,19 @@ class Aoc extends Command
     }
 
     /** @return Collection<int, AocDay> */
-    private function registerDays(string $year): Collection
+    private function registerDays(string $year, ?string $day = null): Collection
     {
+        $path = "Days/Year{$year}";
+
+        if (! is_null($day)) {
+            $path .= "/Day" . str_pad($day, 2, '0', STR_PAD_LEFT);
+        }
+
         return collect()
             ->wrap(iterator_to_array(
                 Finder::create()->files()
                     ->in([app_path()])
-                    ->path("Days/Year{$year}"),
+                    ->path($path),
             ))
             ->map(fn ($file) => str_replace(
                 search: ['app/', '/', '.php'],
