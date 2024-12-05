@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Concerns\ProfilesClosures;
 use App\Days\AocDay;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -11,8 +12,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
 
+/** @phpstan-import-type ProfiledResult from ProfilesClosures */
 class Aoc extends Command
 {
+    use ProfilesClosures;
+
     protected $signature = 'aoc
         {input? : The challenge input}
         {--y|year= : The year to execute, if null then executes current year}
@@ -25,37 +29,50 @@ class Aoc extends Command
     public function __invoke(): void
     {
         $year = $this->option('year') ?? date('Y');
+        $input = $this->getProgramInput();
 
         $this->newLine();
         $this->components->info("Advent of Code {$year}");
 
-        $input = $this->getProgramInput();
-
         $this->registerDays($year, $this->option('day'))
             ->whenEmpty(fn () => $this->components->warn('No days found.'))
             ->each(function ($day) use ($input, $year) {
-                $startTime = microtime(true);
                 $input ??= $this->getDayInput($day, $year);
-                $result = $day($input, (int) $this->option('part'));
-                $runTime = number_format((microtime(true) - $startTime) * 1000);
+
+                $result = $this->profile(fn () => $day($input, (int) $this->option('part')));
 
                 $this->components->twoColumnDetail(
                     "<fg=green;options=bold>{$day->label()}</>",
-                    "<fg=gray>$runTime ms</>",
+                    $this->formatProfile($result),
                 );
-                $this->components->twoColumnDetail('Part one', $this->formatResult($result[0]));
-                $this->components->twoColumnDetail('Part two', $this->formatResult($result[1]));
+
+                $this->components->twoColumnDetail('Part one', $this->formatResult($result['value'][0]));
+                $this->components->twoColumnDetail('Part two', $this->formatResult($result['value'][1]));
                 $this->newLine();
             });
     }
 
-    private function formatResult(mixed $value): string
+    /** @param ?ProfiledResult $result */
+    private function formatResult(?array $result): string
     {
-        if ($value !== null) {
-            return (string) $value;
+        if ($result === null) {
+            return "<fg=blue;options=bold>SKIPPED</>";
         }
 
-        return "<fg=yellow;options=bold>INCOMPLETE</>";
+        if ($result['value'] === null) {
+            return "<fg=yellow;options=bold>INCOMPLETE</>";
+        }
+
+        return "{$this->formatProfile($result)} {$result['value']}";
+    }
+
+    /** @param ProfiledResult $result */
+    private function formatProfile(array $result): string
+    {
+        $time = number_format($result['time_ms'], 3);
+        $memory = number_format($result['memory_kb'], 3);
+
+        return "<fg=gray>{$time} ms, {$memory} kB</>";
     }
 
     private function getProgramInput(): ?string
@@ -113,8 +130,9 @@ class Aoc extends Command
                 replace: ['App\\', '\\', ''],
                 subject: Str::after($file->getRealPath(), base_path() . DIRECTORY_SEPARATOR),
             ))
-            ->sort()
             ->filter(fn ($class) => is_subclass_of($class, AocDay::class))
-            ->mapWithKeys(fn ($c) => [$c => resolve($c)]);
+            ->sort()
+            ->values()
+            ->map(fn ($class) => new $class());
     }
 }

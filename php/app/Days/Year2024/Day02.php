@@ -12,16 +12,16 @@ class Day02 extends AocDay
     /** @var Collection<int, list<int>> */
     private Collection $levelDiffs;
 
-    public function partOne(): int
+    public function partOne(): ?string
     {
-        return $this->parseReports()
+        return (string) $this->parseReports()
             ->filter(fn ($d) => $this->isSafeReport($d))
             ->count();
     }
 
-    public function partTwo(): int
+    public function partTwo(): ?string
     {
-        return $this->parseReports()
+        return (string) $this->parseReports()
             ->reject(function ($diff) {
                 if ($this->isSafeReport($diff)) {
                     return false;

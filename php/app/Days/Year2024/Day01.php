@@ -12,18 +12,18 @@ class Day01 extends AocDay
     /** @var Collection<int, list<int>> */
     private Collection $lists;
 
-    public function partOne(): int
+    public function partOne(): ?string
     {
-        return $this->parseLists()
+        return (string) $this->parseLists()
             ->pipe(fn ($lists) => collect($lists[0])->zip($lists[1]))
             ->reduce(fn ($c, $pair) => $c + abs($pair[1] - $pair[0]), 0);
     }
 
-    public function partTwo(): int
+    public function partTwo(): ?string
     {
         $left = $right = [];
 
-        return $this->parseLists()
+        return (string) $this->parseLists()
             ->pipe(function ($lists) use (&$left, &$right) {
                 $left = array_count_values($lists[0]);
                 $right = array_count_values($lists[1]);
