@@ -19,6 +19,7 @@ class Aoc extends Command
 
     protected $signature = 'aoc
         {input? : The challenge input}
+        {--f|file= : The file to read the input from}
         {--y|year= : The year to execute, if null then executes current year}
         {--d|day= : The day to execute, if null then executes all days}
         {--p|part= : The part to execute, if null then executes all parts}
@@ -79,6 +80,10 @@ class Aoc extends Command
     {
         if (! posix_isatty(STDIN)) {
             return file_get_contents('php://stdin');
+        }
+
+        if ($file = $this->option('file')) {
+            return file_get_contents($file);
         }
 
         return $this->argument('input');
