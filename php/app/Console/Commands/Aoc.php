@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
+use RuntimeException;
 
 /** @phpstan-import-type ProfiledResult from ProfilesClosures */
 class Aoc extends Command
@@ -23,6 +24,7 @@ class Aoc extends Command
         {--y|year= : The year to execute, if null then executes current year}
         {--d|day= : The day to execute, if null then executes all days}
         {--p|part= : The part to execute, if null then executes all parts}
+        {--s|submit : Submit the solution to AoC}
     ';
 
     protected $description = 'Execute AoC solutions.';
@@ -36,6 +38,11 @@ class Aoc extends Command
         $this->components->info("Advent of Code {$year}");
 
         $this->registerDays($year, $this->option('day'))
+            ->tap(function ($days) {
+                if ($days->count() > 1 && $this->option('submit')) {
+                    throw new RuntimeException('Cannot submit multiple days at once.');
+                }
+            })
             ->whenEmpty(fn () => $this->components->warn('No days found.'))
             ->each(function ($day) use ($input, $year) {
                 $input ??= $this->getDayInput($day, $year);
@@ -46,6 +53,14 @@ class Aoc extends Command
                     "<fg=green;options=bold>{$day->label()}</>",
                     $this->formatProfile($result),
                 );
+
+                if ($this->option('submit')) {
+                    if (($result['value'][1]['value'] ?? null) === null) {
+                        $this->submit($year, $day, 1, $result['value'][0]['value']);
+                    } else {
+                        $this->submit($year, $day, 2, $result['value'][1]['value']);
+                    }
+                }
 
                 $this->components->twoColumnDetail('Part one', $this->formatResult($result['value'][0]));
                 $this->components->twoColumnDetail('Part two', $this->formatResult($result['value'][1]));
@@ -98,12 +113,11 @@ class Aoc extends Command
             return file_get_contents($path);
         }
 
-        $day = (int) Str::of($file)->match('/\d+/')->value();
         $session = env('AOC_SESSION');
         throw_unless($session, 'No session cookie found. Please set the AOC_SESSION environment variable.');
 
         $response = Http::withHeaders(['Cookie' => "session={$session}"])
-            ->get("https://adventofcode.com/{$year}/day/{$day}/input")
+            ->get("https://adventofcode.com/{$year}/day/{$day->day()}/input")
             ->throw();
 
         if (! is_dir(dirname($path))) {
@@ -113,6 +127,28 @@ class Aoc extends Command
         file_put_contents($path, $response->body());
 
         return $response->body();
+    }
+
+    private function submit(string $year, AocDay $day, int $level, string $answer): void
+    {
+        $session = env('AOC_SESSION');
+        $body = Http::asForm()
+            ->withHeaders([
+                'Cookie' => "session={$session}",
+            ])
+            ->post("https://adventofcode.com/{$year}/day/{$day->day()}/answer", [
+                'level' => (string) $level,
+                'answer' => $answer,
+            ])
+            ->throw()
+            ->body();
+
+        if (Str::contains($body, 'That\'s the right answer')) {
+            $this->components->info('Answer submitted successfully.');
+        } else {
+            $this->components->error('Answer submission failed.');
+            echo $body;
+        }
     }
 
     /** @return Collection<int, AocDay> */

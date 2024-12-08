@@ -49,6 +49,13 @@ abstract class AocDay
             ->value();
     }
 
+    public function day(): int
+    {
+        return (int) Str::of(class_basename($this))
+            ->match('/\d+/')
+            ->value();
+    }
+
     protected function parseInput(string $input): void
     {
         $this->lines = collect(explode("\n", $input));
