@@ -16,8 +16,9 @@ abstract class AocDay
     /** @var Collection<int, string> */
     protected Collection $lines;
 
-    final public function __construct()
-    {
+    final public function __construct(
+        protected readonly bool $verbose = false,
+    ) {
     }
 
     /** @return array{0: ?ProfiledResult, 1: ?ProfiledResult} */

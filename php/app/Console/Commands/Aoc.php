@@ -138,6 +138,6 @@ class Aoc extends Command
             ->filter(fn ($class) => is_subclass_of($class, AocDay::class))
             ->sort()
             ->values()
-            ->map(fn ($class) => new $class());
+            ->map(fn ($class) => new $class((bool) $this->option('verbose')));
     }
 }
